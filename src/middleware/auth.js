@@ -24,11 +24,6 @@ const authentication = async function(req,res,next){
    }
 }
 
-const authorization = async function(req,res,next){
-    let userId = req.params.userId
-    let decoded = req.decoded.userId
-    if(userId !== decoded){return res.status(403).send({status:false,msg:"you are not authorized"})}
-    next()
-}
 
-module.exports ={authentication,authorization}
+
+module.exports ={authentication}

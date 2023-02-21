@@ -1,17 +1,51 @@
 const userModel = require('../models/userModel');
 const jwt = require("jsonwebtoken");
 const bcrypt = require('bcrypt')
+const crypto = require('crypto');
+const algorithm1 = 'aes-128-cbc';
+const secret = 'mypassword'
 
+function encrypt(stringtoencrypt){
+    let encryptkey = crypto.createCipher(algorithm1, secret);
+    let encryptstr = encryptkey.update(stringtoencrypt, 'utf8', 'hex')
+    encryptstr = encryptstr + encryptkey.final('hex');
+    return encryptstr
+}
 
+function decrypt(stringtodecrypt){
+    let decryptkey = crypto.createDecipher(algorithm1, secret);
+    let decryptstr = decryptkey.update(stringtodecrypt, 'hex', 'utf8')
+    decryptstr = decryptstr + decryptkey.final('utf8');
+    return decryptstr
+}
+//============
 
 const createUser = async (req, res) => {
     try {
         let data = req.body;
-        let password=data.password
+        // let password=data.password
+        let {password,phone,fullName,email}=data
+        phone= encrypt(phone)
+        
+        fullName=encrypt(fullName)
+        
         const hashPassword = await bcrypt.hash(password, 10);
-        data.password = hashPassword;
-        let createData = await userModel.create(data);
+        password = hashPassword;
+        let obj={phone,email,password,fullName}
+        let createData = await userModel.create(obj);
         return res.status(201).send({ status: true, data: createData });
+    } catch (error) {
+        return res.status(500).send({ status: false, msg: error.message });
+    }}
+
+//=================
+const getUser = async (req, res) => {
+    try {
+        let userId = req.decoded.userId;
+        let findUser = await userModel.findOne({_id:userId});
+        findUser.fullName=decrypt(findUser.fullName)
+        findUser.phone=decrypt(findUser.phone)
+        return res.status(201).send({ status: true, data: findUser });
     } catch (error) {
         return res.status(500).send({ status: false, msg: error.message });
     }
@@ -22,7 +56,9 @@ const login = async function (req, res) {
         const data = req.body
         const { email, password } = data
         if (!email || !password)
+
             res.status(400).send({ status: false, message: "Credential must be present" }) 
+
         let user = await userModel.findOne({ email })
         console.log(data)
         if (!user) {
@@ -93,7 +129,7 @@ let updateUser = async function (req, res) {
 
 
 
-module.exports = { createUser, login,forgetPassowrd, updateUser }
+module.exports = { createUser,getUser, login,forgetPassowrd, updateUser }
 
 
 
